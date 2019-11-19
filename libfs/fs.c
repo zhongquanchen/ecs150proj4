@@ -65,13 +65,16 @@ int fs_mount(const char *diskname)
 	if (calculated_fat_blocks <= 0 || FileSystem.SuperBlock.NUM_FAT_BLOCKS != calculated_fat_blocks)
 		return -1;
 
+	/* malloc FAT blocks 
+	 * read correspond block in disk into FAT block */
 	FileSystem.FAT = (uint16_t*)malloc(BLOCK_SIZE * FileSystem.SuperBlock.NUM_FAT_BLOCKS);
 	for (uint16_t i = 0; i < FileSystem.SuperBlock.NUM_FAT_BLOCKS; i++)
 	{
 		if ((status = block_read(i + 1, (void*)(FileSystem.FAT + (BLOCK_SIZE / sizeof(uint16_t)) * i))) < 0)
 			return -1;
 	}
-
+	
+	/* set up root directory */
 	if ((status = block_read(FileSystem.SuperBlock.ROOT_BLOCK, (void*)&FileSystem.RootEntries[0])) < 0)
 		return -1;
 
@@ -80,8 +83,7 @@ int fs_mount(const char *diskname)
 }
 
 int fs_umount(void)
-{
-	/* TODO: Phase 1 */
+{	
 	int status;
 	if (!FileSystem.IsValid)
 		return -1;
@@ -104,13 +106,57 @@ int fs_umount(void)
 }
 
 int fs_info(void)
+{	
+	/* file system is invalid */
+	if (!FileSystem.IsValid)
+		return -1;
+
+	printf("FS Info:\n");
+	printf("total_blk_count=%d\n", FileSystem.SuperBlock.TOTAL_BLOCKS);
+	printf("fat_blk_count=%d\n", FileSystem.SuperBlock.NUM_FAT_BLOCKS);
+	printf("rdir_blk=%d\n", FileSystem.SuperBlock.ROOT_BLOCK);
+	printf("data_blk=%d\n", FileSystem.SuperBlock.DATA_BLOCK);
+	printf("data_blk_count=%d\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
+	/* FIXME: NEED IMPLEMENT 
+	printf("fat_free_ratio=%d/%d\n", );
+	printf("rdir_free_ratio=%d/%d\n", );
+	*/
+	return 0;
+}
+
+/* search for next aviable root directories */
+int set_up_root(const char *filename)
 {
-	/* TODO: Phase 1 */
+	for (int i=0; i<FS_FILE_MAX_COUNT; i++){
+		if (strlen(FileSystem.RootEntries[i].filename)==0){
+			strcpy(FileSystem.RootEntries[i].filename, filename);
+			FileSystem.RootEntries[i].size = 0;
+			/*FIXME: NEED TO ADD datablock */
+			return 0;
+		}else 
+		{
+			if (!strcpy(FileSystem.RootEntries[i].filename, filename))
+				return -1;
+		}
+	}
+
+	/* as the size of root directories reach to max */
+	return -1;
 }
 
 int fs_create(const char *filename)
 {
-	/* TODO: Phase 2 */
+	if (!FileSystem.IsValid)
+		return -1;
+	/* return -1 when filename is null or exceed MAX LEN */
+	if (strlen(filename)==0 || strlen(filename)>FS_FILENAME_LEN)
+		return -1;
+	
+	int stat = set_up_root(filename);
+	if (stat < 0){
+		printf("fs_create fail\n");
+		return -1;
+	}	
 }
 
 int fs_delete(const char *filename)
