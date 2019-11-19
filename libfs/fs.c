@@ -7,46 +7,100 @@
 #include "disk.h"
 #include "fs.h"
 
+#define FS_MAGIC 	    "ECS150FS"
+#define FAT_EOC		     0xffff
 
-/* have a packing attribute for all the data structure
- * within the #pragma 
- */
-#pragma pack(push, 1)
+struct
+{
+	uint16_t IsValid;
 
-typedef struct superblock {
-    int64_t signature;
-    int16_t amount;
-    int16_t root;
-    int16_t data_index;
-    int16_t data_amou;
-    int8_t fat_blocks;
-    int32_t padding[4079];
-} superblock;
+	struct
+	{
+		uint64_t SIGANTURE;
+		uint16_t TOTAL_BLOCKS;
+		uint16_t ROOT_BLOCK;
+		uint16_t DATA_BLOCK;
+		uint16_t NUM_DATA_BLOCKS;
+		uint8_t  NUM_FAT_BLOCKS;
+		uint8_t  RESERVED[BLOCK_SIZE - 17]; // 17 blocks: Section 5.1 Table
+	} SuperBlock;
+	
+	struct
+	{
+		char filename[FS_FILENAME_LEN];
+		uint32_t size;
+		uint16_t datablock;
+		uint8_t reserved[10];
+	} RootEntries[FS_FILE_MAX_COUNT];
 
-#pragma pack(pop)
+	struct
+	{
+		uint16_t is_valid;
+		uint16_t entry_no;
+		uint16_t offset;
+	} OpenFiles[FS_OPEN_MAX_COUNT];
 
-superblock sb;
+	uint16_t *FAT;
+} FileSystem;
 
 int fs_mount(const char *diskname)
 {
-    char* sign = "ECS150FS";
-    /* check if block in the disk can't open */
-    if (block_disk_open(diskname) == -1)
-	return -1;
-    
-    block_read(0, (void*)&sb);
+	int status;
 
-    if(memcmp((char*)&sb.signature, signature, 8 != 0))
-    {
-	printf("read the wrong disk\n");
-	return -1;	
-    }
+	FileSystem.IsValid = 0;
 
+	status = block_disk_open(diskname);
+	if (status < 0)
+		return -1;
+
+	status = block_read(0, &FileSystem.SuperBlock);
+	if (status < 0)
+		return -1;
+
+	if (strncmp((char*)&FileSystem.SuperBlock.SIGANTURE, FS_MAGIC, strlen(FS_MAGIC)) != 0)
+		return -1;
+	
+	// calculate the number of blocks
+	uint16_t calculated_fat_blocks = (FileSystem.SuperBlock.NUM_DATA_BLOCKS * 2) / BLOCK_SIZE;
+	if (calculated_fat_blocks <= 0 || FileSystem.SuperBlock.NUM_FAT_BLOCKS != calculated_fat_blocks)
+		return -1;
+
+	FileSystem.FAT = (uint16_t*)malloc(BLOCK_SIZE * FileSystem.SuperBlock.NUM_FAT_BLOCKS);
+	for (uint16_t i = 0; i < FileSystem.SuperBlock.NUM_FAT_BLOCKS; i++)
+	{
+		if ((status = block_read(i + 1, (void*)(FileSystem.FAT + (BLOCK_SIZE / sizeof(uint16_t)) * i))) < 0)
+			return -1;
+	}
+
+	if ((status = block_read(FileSystem.SuperBlock.ROOT_BLOCK, (void*)&FileSystem.RootEntries[0])) < 0)
+		return -1;
+
+	FileSystem.IsValid = 1;
+	return status;
 }
 
 int fs_umount(void)
 {
 	/* TODO: Phase 1 */
+	int status;
+	if (!FileSystem.IsValid)
+		return -1;
+
+	if ((status = block_write(0, (void*)&FileSystem.SuperBlock)) < 0)
+		return -1;
+
+	for (int i = 0; i < FileSystem.SuperBlock.NUM_FAT_BLOCKS; i++)
+	{
+		if ((status = block_write(i + 1, (void*)(FileSystem.FAT + (BLOCK_SIZE / sizeof(uint16_t)) * i))) < 0)
+			return -1;
+	}
+
+	if ((status = block_write(FileSystem.SuperBlock.ROOT_BLOCK, (void*)&FileSystem.RootEntries[0])) < 0)
+		return -1;
+
+	FileSystem.IsValid = 0;
+	status = block_disk_close();
+	return status;
 }
 
 int fs_info(void)
