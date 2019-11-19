@@ -12,7 +12,6 @@
 /* have a packing attribute for all the data structure
  * within the #pragma 
  */
-#pragma pack(push, 1)
 
 struct
 {
