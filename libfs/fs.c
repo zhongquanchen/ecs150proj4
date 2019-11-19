@@ -82,6 +82,25 @@ int fs_mount(const char *diskname)
 int fs_umount(void)
 {
 	/* TODO: Phase 1 */
+	int status;
+	if (!FileSystem.IsValid)
+		return -1;
+
+	if ((status = block_write(0, (void*)&FileSystem.SuperBlock)) < 0)
+		return -1;
+
+	for (int i = 0; i < FileSystem.SuperBlock.NUM_FAT_BLOCKS; i++)
+	{
+		if ((status = block_write(i + 1, (void*)(FileSystem.FAT + (BLOCK_SIZE / sizeof(uint16_t)) * i))) < 0)
+			return -1;
+	}
+
+	if ((status = block_write(FileSystem.SuperBlock.ROOT_BLOCK, (void*)&FileSystem.RootEntries[0])) < 0)
+		return -1;
+
+	FileSystem.IsValid = 0;
+	status = block_disk_close();
+	return status;
 }
 
 int fs_info(void)
