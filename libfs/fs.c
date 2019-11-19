@@ -116,11 +116,8 @@ uint16_t fs_find_root_entry(const char *filename)
 
 int fs_info(void)
 {
-	/* TODO: Phase 1 */
-	int fs_info(void)
-{
 	if (!FileSystem.IsValid)
-		return -1;
+	return -1;
 
 	printf("FS Info:\n");
 	printf("total_blk_count=%u\n", FileSystem.SuperBlock.TOTAL_BLOCKS);
@@ -147,7 +144,6 @@ int fs_info(void)
 	printf("fat_free_ratio=%u/%u\n", free_fat_ent, total_fat_ent);
 	printf("rdir_free_ratio=%u/%u\n", free_root_entries, total_root_entries);
 	return 0;
-}
 }
 
 int fs_create(const char *filename)
