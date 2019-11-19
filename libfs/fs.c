@@ -9,9 +9,6 @@
 
 #define FS_MAGIC 	    "ECS150FS"
 #define FAT_EOC		     0xffff
-/* have a packing attribute for all the data structure
- * within the #pragma 
- */
 
 struct
 {
