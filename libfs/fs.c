@@ -45,19 +45,6 @@ struct
 
 int fs_mount(const char *diskname)
 {
-    char* sign = "ECS150FS";
-    /* check if block in the disk can't open */
-    if (block_disk_open(diskname) == -1)
-	return -1;
-    
-    block_read(0, (void*)&sb);
-
-    if(memcmp((char*)&sb.signature, signature, 8 != 0))
-    {
-	printf("read the wrong disk\n");
-	return -1;	
-    }
-
 }
 
 int fs_umount(void)
