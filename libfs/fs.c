@@ -27,9 +27,24 @@ struct
 		uint8_t  NUM_FAT_BLOCKS;
 		uint8_t  RESERVED[BLOCK_SIZE - 17];
 	} SuperBlock;
-#pragma pack(pop)
+	
+		struct
+	{
+		char filename[FS_FILENAME_LEN];
+		uint32_t size;
+		uint16_t datablock;
+		uint8_t reserved[10];
+	} RootEntries[FS_FILE_MAX_COUNT];
 
-superblock sb;
+	struct
+	{
+		uint16_t is_valid;
+		uint16_t entry_no;
+		uint16_t offset;
+	} OpenFiles[FS_OPEN_MAX_COUNT];
+
+	uint16_t *FAT;
+} FileSystem;
 
 int fs_mount(const char *diskname)
 {
