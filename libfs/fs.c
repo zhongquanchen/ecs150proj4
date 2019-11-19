@@ -79,8 +79,6 @@ int fs_mount(const char *diskname)
 	return status;
 }
 
-}
-
 int fs_umount(void)
 {
 	/* TODO: Phase 1 */
