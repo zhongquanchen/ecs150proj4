@@ -45,6 +45,20 @@ struct
 
 int fs_mount(const char *diskname)
 {
+	int status;
+
+	FileSystem.IsValid = 0;
+
+	status = block_disk_open(diskname);
+	if (status < 0)
+		return -1;
+
+	status = block_read(0, &FileSystem.SuperBlock);
+	if (status < 0)
+		return -1;
+
+	if (strncmp((char*)&FileSystem.SuperBlock.SIGANTURE, FS_MAGIC, strlen(FS_MAGIC)) != 0)
+		return -1;
 }
 
 int fs_umount(void)
