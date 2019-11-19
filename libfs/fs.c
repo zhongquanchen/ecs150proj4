@@ -22,10 +22,10 @@ struct
 		uint16_t DATA_BLOCK;
 		uint16_t NUM_DATA_BLOCKS;
 		uint8_t  NUM_FAT_BLOCKS;
-		uint8_t  RESERVED[BLOCK_SIZE - 17];
+		uint8_t  RESERVED[BLOCK_SIZE - 17]; // 17 blocks: Section 5.1 Table
 	} SuperBlock;
 	
-		struct
+	struct
 	{
 		char filename[FS_FILENAME_LEN];
 		uint32_t size;
