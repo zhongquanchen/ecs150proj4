@@ -14,16 +14,20 @@
  */
 #pragma pack(push, 1)
 
-typedef struct superblock {
-    int64_t signature;
-    int16_t amount;
-    int16_t root;
-    int16_t data_index;
-    int16_t data_amou;
-    int8_t fat_blocks;
-    int32_t padding[4079];
-} superblock;
+struct
+{
+	uint16_t IsValid;
 
+	struct
+	{
+		uint64_t SIGANTURE;
+		uint16_t TOTAL_BLOCKS;
+		uint16_t ROOT_BLOCK;
+		uint16_t DATA_BLOCK;
+		uint16_t NUM_DATA_BLOCKS;
+		uint8_t  NUM_FAT_BLOCKS;
+		uint8_t  RESERVED[BLOCK_SIZE - 17];
+	} SuperBlock;
 #pragma pack(pop)
 
 superblock sb;
