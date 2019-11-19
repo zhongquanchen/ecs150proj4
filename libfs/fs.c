@@ -130,6 +130,24 @@ int fs_info(void)
 	printf("data_blk_count=%u\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
 
 	uint16_t free_fat_ent = 0, total_fat_ent = ((FileSystem.SuperBlock.NUM_FAT_BLOCKS * BLOCK_SIZE) / sizeof(uint16_t));
+		// calculate free blocks
+		for (uint16_t i = 0; i < total_fat_ent; i++)
+	{
+		if (FileSystem.FAT[i] == 0)
+			free_fat_ent++;
+	}
+
+	uint16_t free_root_entries = 0, total_root_entries = FS_FILE_MAX_COUNT;
+	for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
+	{
+		if (*FileSystem.RootEntries[i].filename == 0)
+			free_root_entries++;
+	}
+
+	printf("fat_free_ratio=%u/%u\n", free_fat_ent, total_fat_ent);
+	printf("rdir_free_ratio=%u/%u\n", free_root_entries, total_root_entries);
+	return 0;
+}
 }
 
 int fs_create(const char *filename)
