@@ -106,6 +106,19 @@ int fs_umount(void)
 int fs_info(void)
 {
 	/* TODO: Phase 1 */
+	int fs_info(void)
+{
+	if (!FileSystem.IsValid)
+		return -1;
+
+	printf("FS Info:\n");
+	printf("total_blk_count=%u\n", FileSystem.SuperBlock.TOTAL_BLOCKS);
+	printf("fat_blk_count=%u\n", FileSystem.SuperBlock.NUM_FAT_BLOCKS);
+	printf("rdir_blk=%u\n", FileSystem.SuperBlock.ROOT_BLOCK);
+	printf("data_blk=%u\n", FileSystem.SuperBlock.DATA_BLOCK);
+	printf("data_blk_count=%u\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
+
+	uint16_t free_fat_ent = 0, total_fat_ent = ((FileSystem.SuperBlock.NUM_FAT_BLOCKS * BLOCK_SIZE) / sizeof(uint16_t));
 }
 
 int fs_create(const char *filename)
