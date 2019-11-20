@@ -137,35 +137,8 @@ int fs_info(void)
         return 0;
 }
 
-/* search for next aviable root directories */
-int set_up_root(const char *filename)
-{
-	if (strlen(FileSystem.RootEntries[i].filename)==0){
-		strcpy(FileSystem.RootEntries[i].filename, filename);				FileSystem.RootEntries[i].size = 0;
-		/*FIXME: NEED TO ADD datablock */
-		return 0;
-	}else 
-	{
-		if (!strcpy(FileSystem.RootEntries[i].filename, filename))				return -1;
-	}
-
-	/* as the size of root directories reach to max */
-	return -1;
-}
-
 int fs_create(const char *filename)
 {
-	if (!FileSystem.IsValid)
-		return -1;
-	/* return -1 when filename is null or exceed MAX LEN */
-	if (strlen(filename)==0 || strlen(filename)>FS_FILENAME_LEN)
-		return -1;
-	
-	int stat = set_up_root(filename);
-	if (stat < 0){
-		printf("fs_create fail\n");
-		return -1;
-	}	
 }
 
 int fs_delete(const char *filename)
