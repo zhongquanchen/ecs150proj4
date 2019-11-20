@@ -110,34 +110,43 @@ int fs_info(void)
 	/* file system is invalid */
 	if (!FileSystem.IsValid)
 		return -1;
+        printf("FS Info:\n");
+        printf("total_blk_count=%u\n", FileSystem.SuperBlock.TOTAL_BLOCKS);
+        printf("fat_blk_count=%u\n", FileSystem.SuperBlock.NUM_FAT_BLOCKS);
+        printf("rdir_blk=%u\n", FileSystem.SuperBlock.ROOT_BLOCK);
+        printf("data_blk=%u\n", FileSystem.SuperBlock.DATA_BLOCK);
+        printf("data_blk_count=%u\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
 
-	printf("FS Info:\n");
-	printf("total_blk_count=%d\n", FileSystem.SuperBlock.TOTAL_BLOCKS);
-	printf("fat_blk_count=%d\n", FileSystem.SuperBlock.NUM_FAT_BLOCKS);
-	printf("rdir_blk=%d\n", FileSystem.SuperBlock.ROOT_BLOCK);
-	printf("data_blk=%d\n", FileSystem.SuperBlock.DATA_BLOCK);
-	printf("data_blk_count=%d\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
-	/* FIXME: NEED IMPLEMENT 
-	printf("fat_free_ratio=%d/%d\n", );
-	printf("rdir_free_ratio=%d/%d\n", );
-	*/
-	return 0;
+        uint16_t free_fat_ent = 0, total_fat_ent = ((FileSystem.SuperBlock.NUM_FAT_BLOCKS * BLOCK_SIZE) / sizeof(uint16_t));
+                // calculate free blocks
+                for (uint16_t i = 0; i < total_fat_ent; i++)
+        {
+                if (FileSystem.FAT[i] == 0)
+                        free_fat_ent++;
+        }
+
+        uint16_t free_root_entries = 0, total_root_entries = FS_FILE_MAX_COUNT;
+        for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
+        {
+                if (*FileSystem.RootEntries[i].filename == 0)
+                        free_root_entries++;
+        }
+
+        printf("fat_free_ratio=%u/%u\n", free_fat_ent, total_fat_ent);
+        printf("rdir_free_ratio=%u/%u\n", free_root_entries, total_root_entries);
+        return 0;
 }
 
 /* search for next aviable root directories */
 int set_up_root(const char *filename)
 {
-	for (int i=0; i<FS_FILE_MAX_COUNT; i++){
-		if (strlen(FileSystem.RootEntries[i].filename)==0){
-			strcpy(FileSystem.RootEntries[i].filename, filename);
-			FileSystem.RootEntries[i].size = 0;
-			/*FIXME: NEED TO ADD datablock */
-			return 0;
-		}else 
-		{
-			if (!strcpy(FileSystem.RootEntries[i].filename, filename))
-				return -1;
-		}
+	if (strlen(FileSystem.RootEntries[i].filename)==0){
+		strcpy(FileSystem.RootEntries[i].filename, filename);				FileSystem.RootEntries[i].size = 0;
+		/*FIXME: NEED TO ADD datablock */
+		return 0;
+	}else 
+	{
+		if (!strcpy(FileSystem.RootEntries[i].filename, filename))				return -1;
 	}
 
 	/* as the size of root directories reach to max */
