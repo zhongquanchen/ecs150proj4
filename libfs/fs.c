@@ -307,16 +307,102 @@ int fs_lseek(int fd, size_t offset)
 {
 	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
 	return -1;
+
+	uint16_t entry = FileSystem.OpenFiles[fd].entry_no;
+	if (*FileSystem.RootEntries[entry].filename == 0)
+		return -1;
+
+	uint16_t newoffset = offset + FileSystem.OpenFiles[fd].offset;
+	if (newoffset > FileSystem.RootEntries[entry].size)
+		return -1;
+
+	FileSystem.OpenFiles[fd].offset = newoffset;
+	return 0;
 }
 
 int fs_write(int fd, void *buf, size_t count)
 {
 	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
 	return -1;
+
+	uint16_t entry = FileSystem.OpenFiles[fd].entry_no;
+	uint16_t firstblock = FileSystem.RootEntries[entry].datablock;
+	if (*FileSystem.RootEntries[entry].filename == 0)
+		return -1;
+
+	if (firstblock == FAT_EOC && count > 0)
+	{
+		firstblock = FileSystem.RootEntries[entry].datablock = fs_findfirstblock();
+		if (firstblock == FAT_EOC)
+			return 0;
+	}
+
+	int byteswritten = 0;
+	int offset = FileSystem.OpenFiles[fd].offset;
+
+	uint8_t tmpbuffer[BLOCK_SIZE];
+	while(count > 0)
+	{
+		int bytesleft = BLOCK_SIZE - (offset % BLOCK_SIZE);
+		if (bytesleft > count)
+			bytesleft = count;
+
+		uint16_t block = fs_get_block_from_offset(firstblock, offset);
+		if (block == FAT_EOC || block_read(block, tmpbuffer) < 0)
+			break;
+
+		memcpy(tmpbuffer + (offset % BLOCK_SIZE), buf + byteswritten, bytesleft);
+		if (block_write(block, tmpbuffer) < 0)
+			break;
+
+		count -= bytesleft;
+		byteswritten += bytesleft;
+		offset += bytesleft;
+	}
+
+	if (FileSystem.RootEntries[entry].size < offset)
+		FileSystem.RootEntries[entry].size = offset;
+
+	FileSystem.OpenFiles[fd].offset = offset;
+	return byteswritten;
+
 }
 
 int fs_read(int fd, void *buf, size_t count)
 {
 	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
 	return -1;
+
+	uint16_t entry = FileSystem.OpenFiles[fd].entry_no;
+	uint16_t firstblock = FileSystem.RootEntries[entry].datablock;
+	if (*FileSystem.RootEntries[entry].filename == 0)
+		return -1;
+
+	int bytesread = 0;
+	int size = FileSystem.RootEntries[entry].size;
+	int offset = FileSystem.OpenFiles[fd].offset;
+
+	if (offset + count > size)
+		count = size - offset;
+
+	uint8_t tmpbuffer[BLOCK_SIZE];
+	while(count > 0)
+	{
+		int bytesleft = BLOCK_SIZE - (offset % BLOCK_SIZE);
+		if (bytesleft > count)
+			bytesleft = count;
+
+		uint16_t block = fs_get_block_from_offset(firstblock, offset);
+		if (block == FAT_EOC || block_read(block, tmpbuffer) < 0)
+			break;
+
+		memcpy(buf + bytesread, tmpbuffer + (offset % BLOCK_SIZE), bytesleft);
+
+		count -= bytesleft;
+		bytesread += bytesleft;
+		offset += bytesleft;
+	}
+
+	FileSystem.OpenFiles[fd].offset = offset;
+	return bytesread;
 }
