@@ -286,7 +286,14 @@ int fs_close(int fd)
 
 int fs_stat(int fd)
 {
-	/* TODO: Phase 3 */
+	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
+	return -1;
+
+	uint16_t entry = FileSystem.OpenFiles[fd].entry_no;
+	if (*FileSystem.RootEntries[entry].filename == 0)
+		return -1;
+
+	return FileSystem.RootEntries[entry].size;
 }
 
 int fs_lseek(int fd, size_t offset)
