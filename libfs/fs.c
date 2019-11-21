@@ -196,16 +196,58 @@ uint16_t fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
 
 int fs_create(const char *filename)
 {
+	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
+		return -1;
+
+	if (fs_find_root_entry(filename) != FS_FILE_MAX_COUNT)
+		return -1;
+
+	uint16_t entry = fs_find_root_entry("");
+
+	if (entry == FS_FILE_MAX_COUNT)
+		return -1;
+
+	FileSystem.RootEntries[entry].size = 0;
+	FileSystem.RootEntries[entry].datablock = FAT_EOC;
+
+	strncpy(FileSystem.RootEntries[entry].filename, filename, FS_FILENAME_LEN);
+	FileSystem.RootEntries[entry].filename[FS_FILENAME_LEN - 1] = 0;
+
+	return 0;
 }
 
 int fs_delete(const char *filename)
 {
-	/* TODO: Phase 2 */
+		if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
+		return -1;
+
+	uint16_t entry = fs_find_root_entry(filename);
+	if (entry == FS_FILE_MAX_COUNT)
+		return -1;
+
+	fs_free_blocks(FileSystem.RootEntries[entry].datablock);
+	memset(FileSystem.RootEntries[entry].filename, 0, FS_FILENAME_LEN);
+	FileSystem.RootEntries[entry].size = 0;
+	FileSystem.RootEntries[entry].datablock = 0;
+	return 0;
 }
 
 int fs_ls(void)
 {
-	/* TODO: Phase 2 */
+		int status;
+	if (!FileSystem.IsValid)
+		return -1;
+
+	printf("FS Ls:\n");
+	for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
+	{
+		if (*FileSystem.RootEntries[i].filename != 0)
+		{
+			uint16_t sz = FileSystem.RootEntries[i].size;
+			printf("file: %s, size: %u, data_blk: %u\n",
+					FileSystem.RootEntries[i].filename,
+					sz, FileSystem.RootEntries[i].datablock);
+		}
 }
 
 int fs_open(const char *filename)
