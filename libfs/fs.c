@@ -248,6 +248,7 @@ int fs_ls(void)
 					FileSystem.RootEntries[i].filename,
 					sz, FileSystem.RootEntries[i].datablock);
 		}
+	}
 }
 
 int fs_open(const char *filename)
