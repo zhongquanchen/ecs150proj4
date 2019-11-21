@@ -24,7 +24,7 @@ struct
 		uint8_t  NUM_FAT_BLOCKS;
 		uint8_t  RESERVED[BLOCK_SIZE - 17]; // 17 blocks: Section 5.1 Table
 	} SuperBlock;
-	
+
 	struct
 	{
 		char filename[FS_FILENAME_LEN];
@@ -59,13 +59,16 @@ int fs_mount(const char *diskname)
 
 	if (strncmp((char*)&FileSystem.SuperBlock.SIGANTURE, FS_MAGIC, strlen(FS_MAGIC)) != 0)
 		return -1;
-	
-	// calculate the number of blocks
-	uint16_t calculated_fat_blocks = (FileSystem.SuperBlock.NUM_DATA_BLOCKS * 2) / BLOCK_SIZE;
-	if (calculated_fat_blocks <= 0 || FileSystem.SuperBlock.NUM_FAT_BLOCKS != calculated_fat_blocks)
-		return -1;
+		/* Fixing
+		// calculate the number of blocks
+		//uint16_t calculated_fat_blocks = (FileSystem.SuperBlock.NUM_DATA_BLOCKS * 2) / BLOCK_SIZE;
+		//printf("calculated fat block is :%d\n", calculated_fat_blocks);
+		//printf("FileSystem.SuperBlock.NUM_FAT_BLOCKS is :%d\n", FileSystem.SuperBlock.NUM_FAT_BLOCKS);
+		//if (calculated_fat_blocks <= 0 || FileSystem.SuperBlock.NUM_FAT_BLOCKS != calculated_fat_blocks)
+		//return -1;
+		*/
 
-	/* malloc FAT blocks 
+	/* malloc FAT blocks
 	 * read correspond block in disk into FAT block */
 	FileSystem.FAT = (uint16_t*)malloc(BLOCK_SIZE * FileSystem.SuperBlock.NUM_FAT_BLOCKS);
 	for (uint16_t i = 0; i < FileSystem.SuperBlock.NUM_FAT_BLOCKS; i++)
@@ -73,7 +76,7 @@ int fs_mount(const char *diskname)
 		if ((status = block_read(i + 1, (void*)(FileSystem.FAT + (BLOCK_SIZE / sizeof(uint16_t)) * i))) < 0)
 			return -1;
 	}
-	
+
 	/* set up root directory */
 	if ((status = block_read(FileSystem.SuperBlock.ROOT_BLOCK, (void*)&FileSystem.RootEntries[0])) < 0)
 		return -1;
@@ -83,7 +86,7 @@ int fs_mount(const char *diskname)
 }
 
 int fs_umount(void)
-{	
+{
 	int status;
 	if (!FileSystem.IsValid)
 		return -1;
@@ -106,7 +109,7 @@ int fs_umount(void)
 }
 
 int fs_info(void)
-{	
+{
 	/* file system is invalid */
 	if (!FileSystem.IsValid)
 		return -1;
@@ -117,7 +120,10 @@ int fs_info(void)
         printf("data_blk=%u\n", FileSystem.SuperBlock.DATA_BLOCK);
         printf("data_blk_count=%u\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
 
+				/* FIXING
         uint16_t free_fat_ent = 0, total_fat_ent = ((FileSystem.SuperBlock.NUM_FAT_BLOCKS * BLOCK_SIZE) / sizeof(uint16_t));
+				*/
+				uint16_t free_fat_ent = 0, total_fat_ent = FileSystem.SuperBlock.NUM_DATA_BLOCKS;
                 // calculate free blocks
                 for (uint16_t i = 0; i < total_fat_ent; i++)
         {
