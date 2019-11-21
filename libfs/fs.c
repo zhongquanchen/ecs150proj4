@@ -171,6 +171,27 @@ void fs_free_blocks(uint16_t firstblock)
 	}
 }
 
+uint16_t fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
+{
+	uint16_t block = firstblock + FileSystem.SuperBlock.DATA_BLOCK;
+	while(offset >= BLOCK_SIZE)
+	{
+		uint16_t newblock = FileSystem.FAT[block];
+		if (newblock == 0 || newblock == FAT_EOC)
+		{
+			newblock = fs_findfirstblock();
+			if (newblock == FAT_EOC)
+				return FAT_EOC;
+			newblock += FileSystem.SuperBlock.DATA_BLOCK;
+			FileSystem.FAT[block] = newblock;
+		}
+		block = newblock;
+		offset -= BLOCK_SIZE;
+	}
+	return block;
+}
+
+
 int fs_create(const char *filename)
 {
 	/* TODO: Phase 2 */
