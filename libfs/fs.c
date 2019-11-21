@@ -301,6 +301,17 @@ int fs_lseek(int fd, size_t offset)
 {
 	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
 	return -1;
+
+	uint16_t entry = FileSystem.OpenFiles[fd].entry_no;
+	if (*FileSystem.RootEntries[entry].filename == 0)
+		return -1;
+
+	uint16_t newoffset = offset + FileSystem.OpenFiles[fd].offset;
+	if (newoffset > FileSystem.RootEntries[entry].size)
+		return -1;
+
+	FileSystem.OpenFiles[fd].offset = newoffset;
+	return 0;
 }
 
 int fs_write(int fd, void *buf, size_t count)
