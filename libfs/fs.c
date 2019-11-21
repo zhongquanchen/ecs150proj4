@@ -65,13 +65,16 @@ int fs_mount(const char *diskname)
 	if (calculated_fat_blocks <= 0 || FileSystem.SuperBlock.NUM_FAT_BLOCKS != calculated_fat_blocks)
 		return -1;
 
+	/* malloc FAT blocks 
+	 * read correspond block in disk into FAT block */
 	FileSystem.FAT = (uint16_t*)malloc(BLOCK_SIZE * FileSystem.SuperBlock.NUM_FAT_BLOCKS);
 	for (uint16_t i = 0; i < FileSystem.SuperBlock.NUM_FAT_BLOCKS; i++)
 	{
 		if ((status = block_read(i + 1, (void*)(FileSystem.FAT + (BLOCK_SIZE / sizeof(uint16_t)) * i))) < 0)
 			return -1;
 	}
-
+	
+	/* set up root directory */
 	if ((status = block_read(FileSystem.SuperBlock.ROOT_BLOCK, (void*)&FileSystem.RootEntries[0])) < 0)
 		return -1;
 
@@ -80,8 +83,7 @@ int fs_mount(const char *diskname)
 }
 
 int fs_umount(void)
-{
-	/* TODO: Phase 1 */
+{	
 	int status;
 	if (!FileSystem.IsValid)
 		return -1;
@@ -104,35 +106,35 @@ int fs_umount(void)
 }
 
 int fs_info(void)
-{
+{	
+	/* file system is invalid */
 	if (!FileSystem.IsValid)
-	return -1;
+		return -1;
+        printf("FS Info:\n");
+        printf("total_blk_count=%u\n", FileSystem.SuperBlock.TOTAL_BLOCKS);
+        printf("fat_blk_count=%u\n", FileSystem.SuperBlock.NUM_FAT_BLOCKS);
+        printf("rdir_blk=%u\n", FileSystem.SuperBlock.ROOT_BLOCK);
+        printf("data_blk=%u\n", FileSystem.SuperBlock.DATA_BLOCK);
+        printf("data_blk_count=%u\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
 
-	printf("FS Info:\n");
-	printf("total_blk_count=%u\n", FileSystem.SuperBlock.TOTAL_BLOCKS);
-	printf("fat_blk_count=%u\n", FileSystem.SuperBlock.NUM_FAT_BLOCKS);
-	printf("rdir_blk=%u\n", FileSystem.SuperBlock.ROOT_BLOCK);
-	printf("data_blk=%u\n", FileSystem.SuperBlock.DATA_BLOCK);
-	printf("data_blk_count=%u\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
+        uint16_t free_fat_ent = 0, total_fat_ent = ((FileSystem.SuperBlock.NUM_FAT_BLOCKS * BLOCK_SIZE) / sizeof(uint16_t));
+                // calculate free blocks
+                for (uint16_t i = 0; i < total_fat_ent; i++)
+        {
+                if (FileSystem.FAT[i] == 0)
+                        free_fat_ent++;
+        }
 
-	uint16_t free_fat_ent = 0, total_fat_ent = ((FileSystem.SuperBlock.NUM_FAT_BLOCKS * BLOCK_SIZE) / sizeof(uint16_t));
-		// calculate free blocks
-		for (uint16_t i = 0; i < total_fat_ent; i++)
-	{
-		if (FileSystem.FAT[i] == 0)
-			free_fat_ent++;
-	}
+        uint16_t free_root_entries = 0, total_root_entries = FS_FILE_MAX_COUNT;
+        for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
+        {
+                if (*FileSystem.RootEntries[i].filename == 0)
+                        free_root_entries++;
+        }
 
-	uint16_t free_root_entries = 0, total_root_entries = FS_FILE_MAX_COUNT;
-	for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
-	{
-		if (*FileSystem.RootEntries[i].filename == 0)
-			free_root_entries++;
-	}
-
-	printf("fat_free_ratio=%u/%u\n", free_fat_ent, total_fat_ent);
-	printf("rdir_free_ratio=%u/%u\n", free_root_entries, total_root_entries);
-	return 0;
+        printf("fat_free_ratio=%u/%u\n", free_fat_ent, total_fat_ent);
+        printf("rdir_free_ratio=%u/%u\n", free_root_entries, total_root_entries);
+        return 0;
 }
 
 uint16_t fs_findfirstblock()
@@ -194,7 +196,6 @@ uint16_t fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
 
 int fs_create(const char *filename)
 {
-	/* TODO: Phase 2 */
 }
 
 int fs_delete(const char *filename)
