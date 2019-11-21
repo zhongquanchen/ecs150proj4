@@ -256,6 +256,23 @@ int fs_open(const char *filename)
 		return -1;
 
 	uint16_t entry = fs_find_root_entry(filename);
+	if (entry == FS_FILE_MAX_COUNT)
+		return -1;
+
+	uint16_t fd;
+	for (fd = 0; fd < FS_OPEN_MAX_COUNT; fd++)
+	{
+		if (!FileSystem.OpenFiles[fd].is_valid)
+			break;
+	}
+
+	if (fd == FS_OPEN_MAX_COUNT)
+		return -1;
+
+	FileSystem.OpenFiles[fd].offset = 0;
+	FileSystem.OpenFiles[fd].is_valid = 1;
+	FileSystem.OpenFiles[fd].entry_no = entry;
+	return fd;
 }
 
 int fs_close(int fd)
