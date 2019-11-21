@@ -135,6 +135,18 @@ int fs_info(void)
 	return 0;
 }
 
+uint16_t fs_findfirstblock()
+{
+	uint16_t block = FileSystem.SuperBlock.DATA_BLOCK;
+	while(block < FileSystem.SuperBlock.TOTAL_BLOCKS && FileSystem.FAT[block] != 0)
+		block++;
+
+	if (block == FileSystem.SuperBlock.TOTAL_BLOCKS)
+		return FAT_EOC;
+
+	return block - FileSystem.SuperBlock.DATA_BLOCK;
+}
+
 int fs_create(const char *filename)
 {
 	/* TODO: Phase 2 */
