@@ -147,6 +147,17 @@ uint16_t fs_findfirstblock()
 	return block - FileSystem.SuperBlock.DATA_BLOCK;
 }
 
+uint16_t fs_find_root_entry(const char *filename)
+{
+	for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
+	{
+		if (strcmp(filename, FileSystem.RootEntries[i].filename) == 0)
+			return i;
+	}
+
+	return FS_FILE_MAX_COUNT;
+}
+
 int fs_create(const char *filename)
 {
 	/* TODO: Phase 2 */
