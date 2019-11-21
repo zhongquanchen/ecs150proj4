@@ -277,7 +277,11 @@ int fs_open(const char *filename)
 
 int fs_close(int fd)
 {
-	/* TODO: Phase 3 */
+		if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
+		return -1;
+
+	FileSystem.OpenFiles[fd].is_valid = 0;
+	return 0;
 }
 
 int fs_stat(int fd)
