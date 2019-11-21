@@ -196,6 +196,24 @@ uint16_t fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
 
 int fs_create(const char *filename)
 {
+	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
+		return -1;
+
+	if (fs_find_root_entry(filename) != FS_FILE_MAX_COUNT)
+		return -1;
+
+	uint16_t entry = fs_find_root_entry("");
+
+	if (entry == FS_FILE_MAX_COUNT)
+		return -1;
+
+	FileSystem.RootEntries[entry].size = 0;
+	FileSystem.RootEntries[entry].datablock = FAT_EOC;
+
+	strncpy(FileSystem.RootEntries[entry].filename, filename, FS_FILENAME_LEN);
+	FileSystem.RootEntries[entry].filename[FS_FILENAME_LEN - 1] = 0;
+
+	return 0;
 }
 
 int fs_delete(const char *filename)
