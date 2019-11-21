@@ -218,7 +218,18 @@ int fs_create(const char *filename)
 
 int fs_delete(const char *filename)
 {
-	/* TODO: Phase 2 */
+		if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
+		return -1;
+
+	uint16_t entry = fs_find_root_entry(filename);
+	if (entry == FS_FILE_MAX_COUNT)
+		return -1;
+
+	fs_free_blocks(FileSystem.RootEntries[entry].datablock);
+	memset(FileSystem.RootEntries[entry].filename, 0, FS_FILENAME_LEN);
+	FileSystem.RootEntries[entry].size = 0;
+	FileSystem.RootEntries[entry].datablock = 0;
+	return 0;
 }
 
 int fs_ls(void)
