@@ -158,6 +158,19 @@ uint16_t fs_find_root_entry(const char *filename)
 	return FS_FILE_MAX_COUNT;
 }
 
+void fs_free_blocks(uint16_t firstblock)
+{
+	if (firstblock == FAT_EOC) return;
+
+	uint16_t block = firstblock + FileSystem.SuperBlock.DATA_BLOCK;
+	while(block != 0 && block != FAT_EOC)
+	{
+		uint16_t lastblock = block;
+		block = FileSystem.FAT[block];
+		FileSystem.FAT[lastblock] = 0;
+	}
+}
+
 int fs_create(const char *filename)
 {
 	/* TODO: Phase 2 */
