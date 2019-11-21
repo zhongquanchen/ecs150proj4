@@ -137,6 +137,63 @@ int fs_info(void)
         return 0;
 }
 
+uint16_t fs_findfirstblock()
+{
+	uint16_t block = FileSystem.SuperBlock.DATA_BLOCK;
+	while(block < FileSystem.SuperBlock.TOTAL_BLOCKS && FileSystem.FAT[block] != 0)
+		block++;
+
+	if (block == FileSystem.SuperBlock.TOTAL_BLOCKS)
+		return FAT_EOC;
+
+	return block - FileSystem.SuperBlock.DATA_BLOCK;
+}
+
+uint16_t fs_find_root_entry(const char *filename)
+{
+	for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
+	{
+		if (strcmp(filename, FileSystem.RootEntries[i].filename) == 0)
+			return i;
+	}
+
+	return FS_FILE_MAX_COUNT;
+}
+
+void fs_free_blocks(uint16_t firstblock)
+{
+	if (firstblock == FAT_EOC) return;
+
+	uint16_t block = firstblock + FileSystem.SuperBlock.DATA_BLOCK;
+	while(block != 0 && block != FAT_EOC)
+	{
+		uint16_t lastblock = block;
+		block = FileSystem.FAT[block];
+		FileSystem.FAT[lastblock] = 0;
+	}
+}
+
+uint16_t fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
+{
+	uint16_t block = firstblock + FileSystem.SuperBlock.DATA_BLOCK;
+	while(offset >= BLOCK_SIZE)
+	{
+		uint16_t newblock = FileSystem.FAT[block];
+		if (newblock == 0 || newblock == FAT_EOC)
+		{
+			newblock = fs_findfirstblock();
+			if (newblock == FAT_EOC)
+				return FAT_EOC;
+			newblock += FileSystem.SuperBlock.DATA_BLOCK;
+			FileSystem.FAT[block] = newblock;
+		}
+		block = newblock;
+		offset -= BLOCK_SIZE;
+	}
+	return block;
+}
+
+
 int fs_create(const char *filename)
 {
 }
