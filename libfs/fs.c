@@ -252,7 +252,10 @@ int fs_ls(void)
 
 int fs_open(const char *filename)
 {
-	/* TODO: Phase 3 */
+	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
+		return -1;
+
+	uint16_t entry = fs_find_root_entry(filename);
 }
 
 int fs_close(int fd)
