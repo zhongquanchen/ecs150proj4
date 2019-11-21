@@ -234,7 +234,20 @@ int fs_delete(const char *filename)
 
 int fs_ls(void)
 {
-	/* TODO: Phase 2 */
+		int status;
+	if (!FileSystem.IsValid)
+		return -1;
+
+	printf("FS Ls:\n");
+	for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
+	{
+		if (*FileSystem.RootEntries[i].filename != 0)
+		{
+			uint16_t sz = FileSystem.RootEntries[i].size;
+			printf("file: %s, size: %u, data_blk: %u\n",
+					FileSystem.RootEntries[i].filename,
+					sz, FileSystem.RootEntries[i].datablock);
+		}
 }
 
 int fs_open(const char *filename)
