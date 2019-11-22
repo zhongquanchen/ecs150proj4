@@ -23,3 +23,11 @@ Fail: got '' but expected 'rdir_free_ratio=128/128'
 Possible problem:
 fs_mount not able to mount size less than 4096 or situation like 
 100/4096 != int
+
+FIXED!
+
+Bug in:
+fs_info()
+wrong printing of total_fat_ent
+
+FIXED!
