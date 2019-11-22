@@ -56,6 +56,9 @@ FS Ls:
 
 MANUALLY TESTED.  
 
+Shell Script: 
+FS_CREATE - wrong block number (find_root_entry function not returning correctly)
+
 
 
 
