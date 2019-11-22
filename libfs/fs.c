@@ -202,7 +202,13 @@ uint16_t fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
 
 int fs_create(const char *filename)
 {
+	/* FIXING
 	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
+		return -1;
+		256 the maximum char length
+	*/
+
+	if (!FileSystem.IsValid || filename == NULL || strlen(filename) > 256)
 		return -1;
 
 	if (fs_find_root_entry(filename) != FS_FILE_MAX_COUNT)
