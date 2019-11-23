@@ -59,6 +59,17 @@ MANUALLY TESTED.
 Shell Script: 
 FS_CREATE - wrong block number (find_root_entry function not returning correctly)
 
+Shell Script:  
+TESTLOG:  
+--- Running run_fs_simple_create ---  
+Info: Created virtual disk 'test.fs' with '10' data blocks  
+Info: 1+0 records in  
+1+0 records out  
+10 bytes copied, 0.0120051 s, 0.8 kB/s  
+Info: thread_fs_add: Cannot open file  
+Fail: got 'file: test-file-1, size: 0, data_blk: 65535' but expected 'file: test-file-1, size: 10, data_blk: 1'  
 
+Possible Reason:
+Phase 4 fs_write
 
 
