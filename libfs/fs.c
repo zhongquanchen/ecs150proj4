@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 
 #include "disk.h"
 #include "fs.h"
@@ -13,7 +14,7 @@
 struct
 {
 	uint16_t IsValid;
-
+	/* struct to store the information for mounted fs */
 	struct
 	{
 		uint64_t SIGANTURE;
@@ -24,7 +25,7 @@ struct
 		uint8_t  NUM_FAT_BLOCKS;
 		uint8_t  RESERVED[BLOCK_SIZE - 17]; // 17 blocks: Section 5.1 Table
 	} SuperBlock;
-
+	/* struct to keep track of file directory in the fs */
 	struct
 	{
 		char filename[FS_FILENAME_LEN];
@@ -32,14 +33,14 @@ struct
 		uint16_t datablock;
 		uint8_t reserved[10];
 	} RootEntries[FS_FILE_MAX_COUNT];
-
+	/* struct to keep track of opened file in fs */
 	struct
 	{
 		uint16_t is_valid;
 		uint16_t entry_no;
 		uint16_t offset;
 	} OpenFiles[FS_OPEN_MAX_COUNT];
-
+	/* FAT array to store file data */
 	uint16_t *FAT;
 } FileSystem;
 
@@ -68,6 +69,10 @@ int fs_mount(const char *diskname)
 		//return -1;
 		*/
 
+	/* if total block amount is not same as total block read from the block_read then return -1 */
+	if (FileSystem.SuperBlock.TOTAL_BLOCKS != block_disk_count())
+		return -1;
+
 	/* malloc FAT blocks
 	 * read correspond block in disk into FAT block */
 	FileSystem.FAT = (uint16_t*)malloc(BLOCK_SIZE * FileSystem.SuperBlock.NUM_FAT_BLOCKS);
@@ -90,9 +95,11 @@ int fs_umount(void)
 	int status;
 	if (!FileSystem.IsValid)
 		return -1;
-
 	if ((status = block_write(0, (void*)&FileSystem.SuperBlock)) < 0)
 		return -1;
+
+	/* above is detection for fs,
+	 * below is writing data into the virtual disk */
 
 	for (int i = 0; i < FileSystem.SuperBlock.NUM_FAT_BLOCKS; i++)
 	{
@@ -159,8 +166,9 @@ uint16_t fs_find_root_entry(const char *filename)
 {
 	for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
 	{
-		if (strcmp(filename, FileSystem.RootEntries[i].filename) == 0)
+		if (strcmp(filename, FileSystem.RootEntries[i].filename) == 0){
 			return i;
+		}
 	}
 
 	return FS_FILE_MAX_COUNT;
@@ -171,6 +179,7 @@ void fs_free_blocks(uint16_t firstblock)
 	if (firstblock == FAT_EOC) return;
 
 	uint16_t block = firstblock + FileSystem.SuperBlock.DATA_BLOCK;
+	/* set all data blocks containing the file contents set to 0 */
 	while(block != 0 && block != FAT_EOC)
 	{
 		uint16_t lastblock = block;
@@ -205,10 +214,8 @@ int fs_create(const char *filename)
 	/* FIXING
 	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
 		return -1;
-		256 the maximum char length
 	*/
-
-	if (!FileSystem.IsValid || filename == NULL || strlen(filename) > 256)
+	if (!FileSystem.IsValid || filename == NULL || strlen(filename) > FS_FILENAME_LEN)
 		return -1;
 
 	if (fs_find_root_entry(filename) != FS_FILE_MAX_COUNT)
@@ -230,7 +237,7 @@ int fs_create(const char *filename)
 
 int fs_delete(const char *filename)
 {
-		if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
+	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == FS_FILENAME_LEN)
 		return -1;
 
 	uint16_t entry = fs_find_root_entry(filename);
@@ -246,7 +253,7 @@ int fs_delete(const char *filename)
 
 int fs_ls(void)
 {
-		int status;
+	int status;
 	if (!FileSystem.IsValid)
 		return -1;
 
@@ -265,13 +272,18 @@ int fs_ls(void)
 
 int fs_open(const char *filename)
 {
-	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
+	//printf("try to open file \n");
+	/* check if the filesystem is valid, if filename valid */
+	if (!FileSystem.IsValid || filename == NULL || strlen(filename) > FS_FILENAME_LEN)
 		return -1;
-
+	//printf("printf filename : %s\n", filename );
+	/* find the file entry for this filename in mounted fs */
 	uint16_t entry = fs_find_root_entry(filename);
+	//printf("entry return from fs_find_root_entry %d\n", entry);
 	if (entry == FS_FILE_MAX_COUNT)
 		return -1;
-
+	//printf("FS_FILE MAX COUNT %d\n", FS_FILE_MAX_COUNT);
+	/* find a valid index in open file struct */
 	uint16_t fd;
 	for (fd = 0; fd < FS_OPEN_MAX_COUNT; fd++)
 	{
@@ -281,7 +293,7 @@ int fs_open(const char *filename)
 
 	if (fd == FS_OPEN_MAX_COUNT)
 		return -1;
-
+	/* set offset to 0, set valid to not valid, store FAT entry to entry */
 	FileSystem.OpenFiles[fd].offset = 0;
 	FileSystem.OpenFiles[fd].is_valid = 1;
 	FileSystem.OpenFiles[fd].entry_no = entry;
@@ -289,8 +301,9 @@ int fs_open(const char *filename)
 }
 
 int fs_close(int fd)
-{
-		if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
+{	
+	/* check if have condition to close file */
+	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
 		return -1;
 
 	FileSystem.OpenFiles[fd].is_valid = 0;
