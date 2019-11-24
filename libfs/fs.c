@@ -150,6 +150,8 @@ int fs_info(void)
         return 0;
 }
 
+/* This functin will allocate a new block of data space for file to write
+ */
 uint16_t fs_findfirstblock()
 {
 	uint16_t block = FileSystem.SuperBlock.DATA_BLOCK;
@@ -162,6 +164,8 @@ uint16_t fs_findfirstblock()
 	return block - FileSystem.SuperBlock.DATA_BLOCK;
 }
 
+/* function will find the filename in the rootentries
+ * @filename: the filename you want to find in the root entries */
 uint16_t fs_find_root_entry(const char *filename)
 {
 	for (uint16_t i = 0; i < FS_FILE_MAX_COUNT; i++)
@@ -188,6 +192,11 @@ void fs_free_blocks(uint16_t firstblock)
 	}
 }
 
+/* This function will find the corresponding block for the offset in the file
+ * @firstblock: the starting block for the file
+ * @offset: the start reading offset for file descriptor
+ * return the current block that offset at, return FAT_EOC if the block ends
+ */
 uint16_t fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
 {
 	uint16_t block = firstblock + FileSystem.SuperBlock.DATA_BLOCK;
@@ -301,7 +310,7 @@ int fs_open(const char *filename)
 }
 
 int fs_close(int fd)
-{	
+{
 	/* check if have condition to close file */
 	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
 		return -1;
@@ -341,11 +350,14 @@ int fs_lseek(int fd, size_t offset)
 
 int fs_write(int fd, void *buf, size_t count)
 {
+	/* check if fs is valid, fd is opened*/
 	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
 	return -1;
 
+	/* get the starting index of block in root entries */
 	uint16_t entry = FileSystem.OpenFiles[fd].entry_no;
 	uint16_t firstblock = FileSystem.RootEntries[entry].datablock;
+
 	if (*FileSystem.RootEntries[entry].filename == 0)
 		return -1;
 
@@ -355,7 +367,7 @@ int fs_write(int fd, void *buf, size_t count)
 		if (firstblock == FAT_EOC)
 			return 0;
 	}
-
+	//printf("FIRSTBLOCK IS %d\n", firstblock);
 	int byteswritten = 0;
 	int offset = FileSystem.OpenFiles[fd].offset;
 
@@ -374,6 +386,8 @@ int fs_write(int fd, void *buf, size_t count)
 		if (block_write(block, tmpbuffer) < 0)
 			break;
 
+		/* update in fat array */
+		int status = block_read(block, (void*)())
 		count -= bytesleft;
 		byteswritten += bytesleft;
 		offset += bytesleft;
@@ -382,6 +396,8 @@ int fs_write(int fd, void *buf, size_t count)
 	if (FileSystem.RootEntries[entry].size < offset)
 		FileSystem.RootEntries[entry].size = offset;
 
+	//printf("FILE SIZE IS %d\n", offset);
+	//printf("FILE DATABLOCK IS %d\n", FileSystem.RootEntries[entry].datablock);
 	FileSystem.OpenFiles[fd].offset = offset;
 	return byteswritten;
 
@@ -389,8 +405,9 @@ int fs_write(int fd, void *buf, size_t count)
 
 int fs_read(int fd, void *buf, size_t count)
 {
+	/* check if fs is valid, fd is opened*/
 	if (!FileSystem.IsValid || fd < 0 || fd >= FS_OPEN_MAX_COUNT || FileSystem.OpenFiles[fd].is_valid == 0)
-	return -1;
+		return -1;
 
 	uint16_t entry = FileSystem.OpenFiles[fd].entry_no;
 	uint16_t firstblock = FileSystem.RootEntries[entry].datablock;
@@ -404,24 +421,27 @@ int fs_read(int fd, void *buf, size_t count)
 	if (offset + count > size)
 		count = size - offset;
 
+	/* read fd block by block */
 	uint8_t tmpbuffer[BLOCK_SIZE];
 	while(count > 0)
 	{
 		int bytesleft = BLOCK_SIZE - (offset % BLOCK_SIZE);
 		if (bytesleft > count)
 			bytesleft = count;
-
+		/* get the offset current block */
 		uint16_t block = fs_get_block_from_offset(firstblock, offset);
 		if (block == FAT_EOC || block_read(block, tmpbuffer) < 0)
 			break;
-
 		memcpy(buf + bytesread, tmpbuffer + (offset % BLOCK_SIZE), bytesleft);
 
+		/* copy offset current block into the buffer,
+		 * and set offset points to next block */
 		count -= bytesleft;
 		bytesread += bytesleft;
 		offset += bytesleft;
 	}
 
+	/* implicitly incremented offset */
 	FileSystem.OpenFiles[fd].offset = offset;
 	return bytesread;
 }
