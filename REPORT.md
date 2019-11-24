@@ -142,6 +142,9 @@ fs_lseek(int fd, size_t offset)
 2. Find the entry in ` OpenFile ` struct to see if its has opened
 3. Store the new offset to the file 
 
+### TESTING ###
+Wrote a testing script to test.
+
 ## Phase IV:
 ```c
 fs_write(int fd, void* buf, size_t count)
@@ -189,4 +192,7 @@ fs_read(int fd, void* buf, size_t count)
 4. Find the offset to corresponding datablock using ` fs_get_block_from_offset `
 5. Copy the @buf to the data block
 6. return the btyes that have read.  
+
+### TESTING ###
+Wrote a testing script to test.
 
