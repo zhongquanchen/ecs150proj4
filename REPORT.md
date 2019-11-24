@@ -14,7 +14,9 @@
 #### OpenFiles struct
 > DETAIL NEEDED
 
-### fs_mount():
+```c
+fs_mount()
+```
 > The method makes the file system ready to be used.
 1. First open the disk block by the @diskname given. Check if the disk contain the disk name, if not return -1.
 2. Read the first block of disk and store it into ` Superblock ` in struct ` FileSystem `. Check if the filesytem name match ` ECS150fs `if not return -1.
@@ -23,8 +25,9 @@
 5. Set up ` RootEntries ` by ` block_read `
 6. change status of ` FileSystem.IsValid ` to true 
 	
-
-### fs_umount()
+```c
+fs_umount()
+```
 > The method will close the disk and all the file data will written out to disk.  
 1. First check if Filesytem is valid, if not return -1. In other words, FileSystem is not mounted.  
 2. Write ` SuperBlock ` info into the disk.  
@@ -32,14 +35,16 @@
 4. Write ` ROOT_BLOCK ` info into the disk.  
 5. Close the disk.   
 
-### fs_info()
+```c
+fs_info()
+```
 > The method will print out File system's info
 1. (skip the printing implement detail)
 2. Use for loop to determine if FAT at index i is 0, then it will be an empty FAT
 3. Use for loop to determine if RootEntries at index i is '0\', then it will be an empty directory
 4. Take those index and print out fat free ratio & rdir free ratio.
 
-### Testing:
+### Testing(DURING PHASE):
 > Testing method we use is
 1. first create a disk.fs using fs_make.x
 2. add some files into disk.fs using fs_ref.x
@@ -88,8 +93,25 @@ fs_ls(void)
 2. Use for loop to loop through the maximun number of file count
 3. Check at index i has a filename that is not empty and print it. 
 
-## Phase III:
+### Testing(DURING PHASE):
+> Testing method we use is
+1. first create a disk.fs using fs_make.x
+2. add some empty files into disk.fs using fs_ref.x
+3. print out the ls of ` disk.fs ` by using fs_ref.x
+4. print out the ls of ` disk.fs ` by using test_fs.x
+5. use diff to determine if result are the same.
 
+## Phase III:
+```c
+fs_open(const char *filename)
+```
+>The method will open a file by fs in virtual disk  
+1. Check if filename and the fs is valid.  
+2. use ` fs_find_root_entry ` method to check if the filename is already in disk  
+3. use for loop to find the an empty place in ` openfile ` struct to mark the open  
+   file.
+4. Set the openfile's offset and entry. So that we can find it in root directory  
+   struct and its validation. 
 ## Phase IV:
 
 
