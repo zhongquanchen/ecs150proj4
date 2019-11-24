@@ -60,14 +60,6 @@ int fs_mount(const char *diskname)
 
 	if (strncmp((char*)&FileSystem.SuperBlock.SIGANTURE, FS_MAGIC, strlen(FS_MAGIC)) != 0)
 		return -1;
-		/* Fixing
-		// calculate the number of blocks
-		//uint16_t calculated_fat_blocks = (FileSystem.SuperBlock.NUM_DATA_BLOCKS * 2) / BLOCK_SIZE;
-		//printf("calculated fat block is :%d\n", calculated_fat_blocks);
-		//printf("FileSystem.SuperBlock.NUM_FAT_BLOCKS is :%d\n", FileSystem.SuperBlock.NUM_FAT_BLOCKS);
-		//if (calculated_fat_blocks <= 0 || FileSystem.SuperBlock.NUM_FAT_BLOCKS != calculated_fat_blocks)
-		//return -1;
-		*/
 
 	/* if total block amount is not same as total block read from the block_read then return -1 */
 	if (FileSystem.SuperBlock.TOTAL_BLOCKS != block_disk_count())
@@ -127,9 +119,6 @@ int fs_info(void)
         printf("data_blk=%u\n", FileSystem.SuperBlock.DATA_BLOCK);
         printf("data_blk_count=%u\n", FileSystem.SuperBlock.NUM_DATA_BLOCKS);
 
-				/* FIXING
-        uint16_t free_fat_ent = 0, total_fat_ent = ((FileSystem.SuperBlock.NUM_FAT_BLOCKS * BLOCK_SIZE) / sizeof(uint16_t));
-				*/
 				uint16_t free_fat_ent = 0, total_fat_ent = FileSystem.SuperBlock.NUM_DATA_BLOCKS;
                 // calculate free blocks
                 for (uint16_t i = 0; i < total_fat_ent; i++)
@@ -154,13 +143,16 @@ int fs_info(void)
  */
 uint16_t fs_findfirstblock()
 {
-	uint16_t block = FileSystem.SuperBlock.DATA_BLOCK;
+	/* data block will start at block 1 to have same index with FAT */
+	uint16_t block = FileSystem.SuperBlock.DATA_BLOCK + 1;
 	while(block < FileSystem.SuperBlock.TOTAL_BLOCKS && FileSystem.FAT[block] != 0)
 		block++;
 
 	if (block == FileSystem.SuperBlock.TOTAL_BLOCKS)
 		return FAT_EOC;
 
+	/* update in fat array */
+	FileSystem.FAT[block] = block;
 	return block - FileSystem.SuperBlock.DATA_BLOCK;
 }
 
@@ -220,10 +212,7 @@ uint16_t fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
 
 int fs_create(const char *filename)
 {
-	/* FIXING
-	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == 0)
-		return -1;
-	*/
+	/* check if fs is valid, if filename is empty or exceed the max len */
 	if (!FileSystem.IsValid || filename == NULL || strlen(filename) > FS_FILENAME_LEN)
 		return -1;
 
@@ -235,6 +224,7 @@ int fs_create(const char *filename)
 	if (entry == FS_FILE_MAX_COUNT)
 		return -1;
 
+	/* size set to 0, and datablk set to FAT_EOC, set filename to @filename */
 	FileSystem.RootEntries[entry].size = 0;
 	FileSystem.RootEntries[entry].datablock = FAT_EOC;
 
@@ -246,13 +236,15 @@ int fs_create(const char *filename)
 
 int fs_delete(const char *filename)
 {
-	if (!FileSystem.IsValid || filename == NULL || strlen(filename) == FS_FILENAME_LEN)
+	/* check if fs is valid, if filename is empty or exceed the max len */
+	if (!FileSystem.IsValid || filename == NULL || strlen(filename) > FS_FILENAME_LEN)
 		return -1;
 
 	uint16_t entry = fs_find_root_entry(filename);
 	if (entry == FS_FILE_MAX_COUNT)
 		return -1;
 
+	/* delete fat block(set fat block to 0) */
 	fs_free_blocks(FileSystem.RootEntries[entry].datablock);
 	memset(FileSystem.RootEntries[entry].filename, 0, FS_FILENAME_LEN);
 	FileSystem.RootEntries[entry].size = 0;
@@ -281,17 +273,16 @@ int fs_ls(void)
 
 int fs_open(const char *filename)
 {
-	//printf("try to open file \n");
 	/* check if the filesystem is valid, if filename valid */
 	if (!FileSystem.IsValid || filename == NULL || strlen(filename) > FS_FILENAME_LEN)
 		return -1;
-	//printf("printf filename : %s\n", filename );
+
 	/* find the file entry for this filename in mounted fs */
 	uint16_t entry = fs_find_root_entry(filename);
-	//printf("entry return from fs_find_root_entry %d\n", entry);
+
 	if (entry == FS_FILE_MAX_COUNT)
 		return -1;
-	//printf("FS_FILE MAX COUNT %d\n", FS_FILE_MAX_COUNT);
+
 	/* find a valid index in open file struct */
 	uint16_t fd;
 	for (fd = 0; fd < FS_OPEN_MAX_COUNT; fd++)
@@ -361,16 +352,22 @@ int fs_write(int fd, void *buf, size_t count)
 	if (*FileSystem.RootEntries[entry].filename == 0)
 		return -1;
 
+	/* when file is an empty file and needs to extend the size */
 	if (firstblock == FAT_EOC && count > 0)
 	{
 		firstblock = FileSystem.RootEntries[entry].datablock = fs_findfirstblock();
 		if (firstblock == FAT_EOC)
 			return 0;
 	}
-	//printf("FIRSTBLOCK IS %d\n", firstblock);
+
 	int byteswritten = 0;
 	int offset = FileSystem.OpenFiles[fd].offset;
 
+	/* 1. check the position of offset in block. and set the bytesleft
+	 * 2. convert offset position into the corresponding data block
+	 * 3. copy the content of block out to tempbuf
+	 * 4. copy the rest of the block content from @buf
+	 * 5. overwritten the whole block with tempbuf */
 	uint8_t tmpbuffer[BLOCK_SIZE];
 	while(count > 0)
 	{
@@ -386,8 +383,6 @@ int fs_write(int fd, void *buf, size_t count)
 		if (block_write(block, tmpbuffer) < 0)
 			break;
 
-		/* update in fat array */
-		int status = block_read(block, (void*)())
 		count -= bytesleft;
 		byteswritten += bytesleft;
 		offset += bytesleft;
@@ -396,8 +391,6 @@ int fs_write(int fd, void *buf, size_t count)
 	if (FileSystem.RootEntries[entry].size < offset)
 		FileSystem.RootEntries[entry].size = offset;
 
-	//printf("FILE SIZE IS %d\n", offset);
-	//printf("FILE DATABLOCK IS %d\n", FileSystem.RootEntries[entry].datablock);
 	FileSystem.OpenFiles[fd].offset = offset;
 	return byteswritten;
 
