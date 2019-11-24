@@ -57,25 +57,30 @@ fs_info()
 fs_create(const char *filename)
 ```
 > The method will create a new and empty file name @filename. Has a helper function ` fs_find_root_entry `
-1. Check if Filesystem is valid or if it is existed. Check if filename is empty or exceed the max name length
-2. Use helper function ` fs_find_root_entry() ` to seek for an empty entry for file to store.
+1. Check if Filesystem is valid or if it is existed. Check if filename is empty
+   or exceed the max name length
+2. Use helper function ` fs_find_root_entry() ` to seek for an empty entry for 
+   file to store.
 3. Set size of the file = 0, and the datablock to ` FAT_EOC `.
 4. Copy the filename to the root entry. 
 
 ``` c
 fs_find_root_entry(const char *filename)
 ```
-> The method will find an empty entry for the root directory and return the index for the entry.  
-1. Use for loop to find an empty entry, return index on found, else return file maximum count  
+> The method will find an empty entry for the root directory and return the 
+  index for the entry.  
+1. Use for loop to find an empty entry, return index on found else return file
+  maximum count  
 
 ``` c
 fs_delete(const char *filename)
 ```
-> The method will remove the file from root directory of the mounted file system.  
+> The method will remove the file from root directory of the mounted file system
 1. Check if Filesystem is valid or if it is existed. 
-2. Use helper function ` fs_find_root_entry ` to seek for the corresponding filename. return -1 if the filename does not  
-   exist in filesystem.  
-3. Use helper function ` fs_free_block ` to free the space for the corresponding filename. 
+2. Use helper function ` fs_find_root_entry ` to seek for the corresponding  
+   filename. return -1 if the filename does not exist in filesystem.  
+3. Use helper function ` fs_free_block ` to free the space for the correspondin
+   filename. 
 4. Reset the root entry to 0. make it ready to store other file
 
 ``` c
@@ -83,7 +88,8 @@ fs_free_blcok(uint16_t firstblock)
 ```
 > The function will free the space for the block in the mounted file system  
 1. Check if the block that passed in @firstblock is End Of Chain, return. 
-2. Use While loop to check if blcok has been freed and FAT at block index is set to 0
+2. Use While loop to check if blcok has been freed and FAT at block index is
+   set to 0
 
 ```c
 fs_ls(void)
@@ -107,11 +113,80 @@ fs_open(const char *filename)
 ```
 >The method will open a file by fs in virtual disk  
 1. Check if filename and the fs is valid.  
-2. use ` fs_find_root_entry ` method to check if the filename is already in disk  
-3. use for loop to find the an empty place in ` openfile ` struct to mark the open  
-   file.
-4. Set the openfile's offset and entry. So that we can find it in root directory  
-   struct and its validation. 
-## Phase IV:
+2. use ` fs_find_root_entry ` method to check if the filename is already in disk
+3. use for loop to find the an empty place in ` openfile ` struct to mark the 
+   open file.
+4. Set the openfile's offset and entry. So that we can find it in root directory   struct and its validation. 
 
+```c
+fs_close(int fd)
+```
+>This function will close a file in fs 
+1. Check if filename and the fs is valid.
+2. Set ` Openfile ` in ` FileSystem ` to valid. So that when we have other file
+   need to open, it can store in this index again.
+
+```c
+fs_stat(int fd)
+```
+>This function will check for the size, name, datablock start. 
+1. Check if filename and the fs is valid. 
+2. Find the entry in ` OpenFile ` struct to see if its has opened 
+3. Return the size of the file 
+
+```c
+fs_lseek(int fd, size_t offset)
+```
+>This function set the offset of the file
+1. Check if filename and the fs is valid.
+2. Find the entry in ` OpenFile ` struct to see if its has opened
+3. Store the new offset to the file 
+
+## Phase IV:
+```c
+fs_write(int fd, void* buf, size_t count)
+```
+>This function will write @buf content into the @fd file descriptor
+1. Check if file descriptor and fs valid
+2. find the entry of the opened file by the @fd. 
+3. Record down the starting block index. 
+4. Check if the block is FAT_EOC, and see if it needs to extend data block
+5. Check the position of the offset in block and set the bytesleft. 
+6. convert offset position into corresponding data block.
+7. copy the content of block out to a temp buf
+8. copy the rest of the block content from @buf
+9. overwritten the whole block with temp buf
+
+```c
+fs_get_block_from_offset(uint16_t firstblock, uint16_t offset)
+```
+>This is a helper function to search for the offset in the corresponding data  
+ block.  
+1. Set block position to the starting datablock of the file  
+2. See if the offset data block is different than the starting datablock  
+3. if it is different, than mark the @block position plus a datablock  
+4. until the offset data block is the same data block with @block  
+5. return the @block, which is the offset block position.  
+
+```c
+fs_findfirstblock()
+```
+>This is a helper function to search for the an availble data block, will used 
+ when the file needs to extend block.
+1. Set the @block to the starting index of data_block
+2. use while loop to find the a empty data block for use
+3. if the @block is availble in FAT array, which FAT[block] = 0, then the block
+   can be use.
+4. return avaible @block or FAT_EOC to tell no empty space anymore
+
+```c
+fs_read(int fd, void* buf, size_t count)
+```
+>This function will read the file and copy to @buf
+1. Check if @fd and fs is valid
+2. Find the entry for the fd in ` Openfile `
+3. Find the starting data block in ` RootEntries `
+4. Find the offset to corresponding datablock using ` fs_get_block_from_offset `
+5. Copy the @buf to the data block
+6. return the btyes that have read.  
 
