@@ -141,19 +141,87 @@ run_test5()
   rm file1
 }
 
+# test if it can write and read
+run_test6()
+{
+  # make fresh virtual disk
+  ./fs_make.x disk.fs 100
+
+  # make some files 
+  echo "toto" > file1
+  echo "hello world!" > file2
+
+  # add them into disk.fs
+  ./test_fs.x add disk.fs file1
+  ./test_fs.x add disk.fs file2
+
+  # ls them out
+  ./test_fs.x ls disk.fs > lib.stdout
+  ./fs_ref.x ls disk.fs > ref.stdout
+
+  ./test_fs.x cat disk.fs file1 > libfile1
+  ./test_fs.x cat disk.fs file2 > libfile2
+
+  ./fs_ref.x cat disk.fs file1 > reffile1
+  ./fs_ref.x cat disk.fs file2 > reffile2
+
+  # put output files into variables
+  REF_STDOUT=$(cat ref.stdout)
+  LIB_STDOUT=$(cat lib.stdout)
+  
+  REF_FILE1 = $(cat reffile1)
+  REF_FILE2 = $(cat reffile2)
+  LIB_FILE1 = $(cat libfile1)
+  LIB_FILE2 = $(cat libfile2)
+
+  # compare 
+  if [ "$REF_STDOUT" != "$LIB_STDOUT" ]; then
+   echo "Case 6 outputs don't match..."
+   diff -u ref.stdout lib.stdout
+  else
+   echo "Case 6 passed!"
+  fi
+
+  # compare file content
+  if [ "$REF_FILE1" != "$LIB_FILE1" ]; then
+   echo "Case 6.1 outputs don't match..."
+   diff -u ref.stdout lib.stdout
+  else
+   echo "Case 6.1 passed!"
+  fi
+
+  # compare disk info
+  if [ "$REF_FILE2" != "$LIB_FILE2" ]; then
+   echo "Case 6.2 outputs don't match..."
+   diff -u ref.stdout lib.stdout
+  else
+   echo "Case 6.2 passed!"
+  fi
+
+  # clean
+  rm disk.fs
+  rm ref.stdout lib.stdout reffile1 reffile2 libfile1 libfile2
+  rm file1 file2
+}
+
+
 #
 # Run tests
 #
 run_tests()
 {
 	# Phase 1
-  echo "\n--- TESTING PHASE 1 ---"
+  echo "\n--- TESTING ---"
   run_test1
   run_test2
 	# Phase 2
   run_test34
   # Phase 3
   run_test5
+  # Phase 4
+  run_test6
+
+  echo "--- ALL TEST CASE ENDS ---\n"
 }
 
 run_tests
